@@ -22,9 +22,27 @@ class ShoppingController extends Controller
     }
 
     public function addToCart(Request $request) {
-        $clothes_id = $request->clothes_id;
         $jumlah = $request->jumlah;
+        if ($jumlah == 0) {
+            return response()->json([
+                'result' => "Failed",
+                'message' => "Tidak dapat membeli item, jumlah item 0 !"
+            ], 403);
+        }
+        $clothes_id = $request->clothes_id;
         $session_id = $request->session_id;
+        $itemInCart = false;
+
+        if (ShoppingCart::query()->where('session_id', $session_id)->where('clothes_id', $clothes_id)->count()){
+            $itemInCart = true;
+        }
+
+        if ($itemInCart) {
+            return response()->json([
+                'result' => "Failed",
+                'message' => "Item sudah terdapat di cart !"
+            ], 403);
+        }
 
         ShoppingCart::create([
             'session_id' => $session_id,

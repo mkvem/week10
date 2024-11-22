@@ -14,12 +14,15 @@
                 </div>
                 <div class="modal-body">
                     <div class="row">
+                        <div id="loadingGif" class="col-md-12 position-relative py-4">
+                            <img src="{{asset('images/loading.gif')}}" class="position-absolute top-50 start-50 translate-middle" style="width:48px;" />
+                        </div>
                         <div id="listItems" class="col-md-12">
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-primary">Check Out</button>
+                    <button id="checkOutButton" type="button" class="btn btn-primary">Check Out</button>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
@@ -28,21 +31,14 @@
     {{-- End of Shopping Cart Modal --}}
 
     {{-- Notification Toast --}}
-    {{-- <div class="toast" role="alert" aria-live="assertive" aria-atomic="true">
-        <div class="toast-header">
-            <strong class="me-auto">Bootstrap</strong>
-            <small>11 mins ago</small>
-            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
-        </div>
-        <div class="toast-body">
-            Hello, world! This is a toast message.
-        </div>
-    </div> --}}
-    <div id="resultToast" class="toast-container position-absolute top-0 end-0 p-3">
-        <div class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 11">
+        <div id="resultToast" class="toast hide" role="alert" aria-live="assertive" aria-atomic="true">
             <div class="toast-header">
+                <div id="notificationIcon" class="rounded me-2 bg-success" style="width:20px;height:20px;"></div>
                 <strong id="notificationTitle" class="me-auto"></strong>
-                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                <button type="button" class="ml-2 mb-1 close" data-bs-dismiss="toast" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
             </div>
             <div id="notificationMessage" class="toast-body">
             </div>
@@ -106,39 +102,68 @@
 
 @section('library-js')
     <script type="text/javascript">
-        $(document).ready(function() {
-            $("#resultToast").show();
-            $("#shoppingCartModal").on('show.bs.modal', function(event) {
-                console.log("Modal is opened !");
-                $.ajax({
-                    url: "/shoppingcart/{{ session()->getId() }}",
-                    success: function(result) {
-                        console.log(result);
-                        var html = "<ul class='list-group'>";
+        function resetNotificationIcon() {
+            $("#notificationIcon").removeClass (function (index, className) {
+                return (className.match (/\bbg-\S+/g) || []).join(' ');
+            });
+        }
+
+        function loadShoppingCartData() {
+            $("#listItems").html("");
+            $("#loadingGif").show();
+            $.ajax({
+                url: "/shoppingcart/{{ session()->getId() }}",
+                success: function(result) {
+                    var html;
+                    if (result.data.length > 0) {
+                        html = "<ul class='list-group'>";
                         for (var i = 0; i < result.data.length; i++) {
                             html += "<li class='list-group-item'>";
                             html += result.data[i].clothes.name + " - ";
                             html += result.data[i].clothes.color + " - ";
                             html += result.data[i].clothes.size + " - ";
                             html += result.data[i].jumlah;
-                            html += "<form action='/deletefromshoppingcart' method='POST'>";
-                            html += "<input type='hidden' name='_token' value='{{ csrf_token() }}' />";
-                            html += "<input type='hidden' name='id' value='" + result.data[i].id + "' />";
-                            html += "<button type='submit' class='btn btn-sm btn-danger' style='float:right;'>";
+                            // html += "<form action='/deletefromshoppingcart' method='POST'>";
+                            // html +=
+                            //     "<input type='hidden' name='_token' value='{{ csrf_token() }}' />";
+                            // html += "<input type='hidden' name='id' value='" + result.data[i]
+                            //     .id + "' />";
+                            html +=
+                                "<button type='button' class='delete btn btn-sm btn-danger' style='float:right;' data-id='" + result.data[i]
+                                .id + "'>";
                             html += "<i class='fa-solid fa-trash-can'></i>";
                             html += "</button>";
-                            html += "</form>";
+                            // html += "</form>";
                             html += "</li>";
                         }
                         html += "</ul>";
-                        $("#listItems").html(html);
+                        $("#checkOutButton").prop("disabled", false);
+                    } else {
+                        html = "Shopping cart is empty !";
+                        $("#checkOutButton").prop("disabled", true);
                     }
-                });
+
+                    $("#listItems").html(html);
+                },
+                error: function(xhr, status, error) {
+                    console.log(xhr.responseText);
+                },
+                complete: function(xhr, status, error) {
+                    $("#loadingGif").hide();
+                }
+            });
+        }
+
+        $(document).ready(function() {
+            $("#shoppingCartModal").on('show.bs.modal', function(event) {
+                console.log("Modal is opened !");
+                loadShoppingCartData();
             });
 
             //Add to cart function
             $("#addToCart").on('click', function() {
                 console.log("Add to cart");
+                resetNotificationIcon();
                 var jumlah = $("#jumlah").val();
                 $.ajax({
                     url: "/addtocart",
@@ -150,16 +175,51 @@
                         "jumlah": jumlah
                     },
                     success: function(result) {
-                        console.log(result);
-                        $("#notificationTitle").html(result.result);
-                        $("#notificationMessage").html(result.message);
-                        $("#resultToast").show();
+                        $("#notificationIcon").addClass("bg-success");
                         $("#jumlah").val(0);
                     },
                     error: function(xhr, status, error) {
-                        console.log(xhr.responseText);
+                        $("#notificationIcon").addClass("bg-danger");
+                    },
+                    complete: function(xhr, status, error) {
+                        var result = JSON.parse(xhr.responseText);
+                        console.log(result);
+                        $("#notificationTitle").html(result.result);
+                        $("#notificationMessage").html(result.message);
+                        $("#resultToast").toast('show');
                     }
                 });
+            });
+
+        });
+
+        // Delete item from cart function
+        $(document).on('click', '.delete', function(e) {
+            console.log("Delete button clicked");
+            resetNotificationIcon();
+            $.ajax({
+                url: "/deletefromshoppingcart",
+                type: "POST",
+                data: {
+                    "_token": "{{ csrf_token() }}",
+                    "session_id": "{{ session()->getId() }}",
+                    "id": $(this).data('id')
+                },
+                success: function(result) {
+                    $("#notificationIcon").addClass("bg-success");
+                    $("#jumlah").val(0);
+                },
+                error: function(xhr, status, error) {
+                    $("#notificationIcon").addClass("bg-danger");
+                },
+                complete: function(xhr, status, error) {
+                    loadShoppingCartData();
+                    var result = JSON.parse(xhr.responseText);
+                    console.log(result);
+                    $("#notificationTitle").html(result.result);
+                    $("#notificationMessage").html(result.message);
+                    $("#resultToast").toast('show');
+                }
             });
         });
     </script>
