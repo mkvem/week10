@@ -22,7 +22,9 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button id="checkOutButton" type="button" class="btn btn-primary">Check Out</button>
+                    <a href="{{ route('checkout') }}">
+                        <button id="checkOutButton" type="button" class="btn btn-primary">Check Out</button>
+                    </a>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
@@ -69,7 +71,7 @@
                 </div>
                 <span class="ml-1 my-auto">{{ $clothes->color }}</span>
             </div>
-            <div>Size: {{ $clothes->size }} {{ session()->getId() }}</div>
+            <div>Size: {{ $clothes->size }}</div>
 
             <!-- Add to cart section -->
             <div class="row form-group my-2">
@@ -119,18 +121,17 @@
                         html = "<ul class='list-group'>";
                         for (var i = 0; i < result.data.length; i++) {
                             html += "<li class='list-group-item'>";
+                            html += "<img src='{{ asset('images/dummy-clothes.jpg') }}' class='rounded mb-2 mr-3' style='height:100px;float:left;' />";
                             html += result.data[i].clothes.name + " - ";
                             html += result.data[i].clothes.color + " - ";
-                            html += result.data[i].clothes.size + " - ";
-                            html += result.data[i].jumlah;
+                            html += result.data[i].clothes.size;
                             // html += "<form action='/deletefromshoppingcart' method='POST'>";
                             // html +=
                             //     "<input type='hidden' name='_token' value='{{ csrf_token() }}' />";
                             // html += "<input type='hidden' name='id' value='" + result.data[i]
                             //     .id + "' />";
-                            html +=
-                                "<button type='button' class='delete btn btn-sm btn-danger' style='float:right;' data-id='" + result.data[i]
-                                .id + "'>";
+                            html += "<input type='number' class='jumlah form-control ml-5' value='" + result.data[i].jumlah + "' style='width:60px;display:inline-block;' data-id='" + result.data[i].id + "' />";
+                            html += "<button type='button' class='delete btn btn-sm btn-danger' style='float:right;' data-id='" + result.data[i].id + "'>";
                             html += "<i class='fa-solid fa-trash-can'></i>";
                             html += "</button>";
                             // html += "</form>";
@@ -208,6 +209,36 @@
                 success: function(result) {
                     $("#notificationIcon").addClass("bg-success");
                     $("#jumlah").val(0);
+                },
+                error: function(xhr, status, error) {
+                    $("#notificationIcon").addClass("bg-danger");
+                },
+                complete: function(xhr, status, error) {
+                    loadShoppingCartData();
+                    var result = JSON.parse(xhr.responseText);
+                    console.log(result);
+                    $("#notificationTitle").html(result.result);
+                    $("#notificationMessage").html(result.message);
+                    $("#resultToast").toast('show');
+                }
+            });
+        });
+
+        // Edit jumlah item di shopping cart
+        $(document).on('change', '.jumlah', function(e) {
+            console.log("Jumlah item diubah !");
+            resetNotificationIcon();
+            $.ajax({
+                url: "/updatecartitemqty",
+                type: "POST",
+                data: {
+                    "_token": "{{ csrf_token() }}",
+                    "session_id": "{{ session()->getId() }}",
+                    "id": $(this).data('id'),
+                    "jumlah": $(this).val()
+                },
+                success: function(result) {
+                    $("#notificationIcon").addClass("bg-success");
                 },
                 error: function(xhr, status, error) {
                     $("#notificationIcon").addClass("bg-danger");
