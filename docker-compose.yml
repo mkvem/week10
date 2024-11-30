@@ -1,0 +1,16 @@
+services:
+  web:
+    container_name: web
+    build: .
+    ports:
+      - 80:80
+  db:
+    image: mysql
+    container_name: mysqldb
+    volumes:
+      - ./db_data:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: 12345
+      MYSQL_DATABASE: clothingshop
+    ports:
+      - 3306:3306
