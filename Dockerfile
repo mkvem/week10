@@ -1,5 +1,7 @@
 FROM php:8.3-apache
 
+# Install node.js and npm
+RUN apt-get update && apt-get install -y nodejs && apt-get install -y npm
 # Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
@@ -18,11 +20,5 @@ RUN chown www-data:www-data /var/www/html/ -R
 EXPOSE 80
 
 RUN composer install
-
-RUN apt-get update && apt-get install -y \
-    software-properties-common \
-    npm
-RUN npm install npm@latest -g && \
-    npm install n -g && \
-    n latest
+RUN npm install
 RUN npm run build

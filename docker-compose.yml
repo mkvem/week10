@@ -2,6 +2,13 @@ services:
   web:
     container_name: web
     build: .
+    volumes:
+      - type: bind
+        source: .
+        target: /var/www/html
+    working_dir: /var/www/html
+    links: 
+      - db
     ports:
       - 80:80
   db:
